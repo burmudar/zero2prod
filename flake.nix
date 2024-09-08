@@ -35,16 +35,20 @@
       devShells = forAllSystems (system:
         let
           pkgs = let result = nixpkgsFor.${system}; in result.pkgs;
-          baseDeps = with pkgs; [
-            # define your own version here
-            rust-bin.stable."${rustVersion}".default
-            rust-bin.stable."${rustVersion}".rustfmt
-            rust-bin.stable."${rustVersion}".rust-analyzer
+          rust = pkgs.rust-bin.stable."${rustVersion}";
+          baseDeps = [
+            rust.default
+            rust.rustfmt
+            rust.rust-analyzer
+            rust.clippy
           ];
         in
         {
           default = pkgs.mkShell {
             buildInputs = baseDeps;
+            shellHook = ''
+            export PATH="$HOME/.cargo/bin":$PATH
+            '';
           };
         });
 
