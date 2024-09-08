@@ -48,6 +48,7 @@
             buildInputs = baseDeps;
             shellHook = ''
             export PATH="$HOME/.cargo/bin":$PATH
+            echo "WILLIAM"
             '';
           };
         });
