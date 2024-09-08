@@ -17,9 +17,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: Fmt
+    - name: Fmt
       run: cargo fmt -- --check
-    - uses: Lint
+    - name: Lint
       run: cargo clippy -- -D warnings
     - name: Build
       run: cargo build --verbose
