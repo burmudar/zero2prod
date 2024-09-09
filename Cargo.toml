@@ -1,8 +1,20 @@
 [package]
 name = "zero2prod"
 version = "0.1.0"
+authors = [ "William Bezuidenhout <me@ignore.me>" ]
 edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+# Double brackets means array in TOML.
+# In rust you can have one library but multiple binaries
+[[bin]]
+path = "src/main.rs"
+name = "zero2prod"
 
 [dependencies]
 actix-web = "4.9.0"
+reqwest = "0.12.7"
 tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
+

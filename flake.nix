@@ -41,12 +41,16 @@
             rust.rustfmt
             rust.rust-analyzer
             rust.clippy
+            pkgs.openssl
           ];
         in
         {
           default = pkgs.mkShell {
             buildInputs = baseDeps;
+            nativeBuildInputs = [ pkgs.pkg-config ]; # need this for openssl-sys crate
+            # need to tell pkg_config where to find openssl hence PKG_CONFIG_PATH
             shellHook = ''
+            export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig";
             export PATH="$HOME/.cargo/bin":$PATH
             '';
           };
