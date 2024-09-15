@@ -42,6 +42,10 @@
             rust.rust-analyzer
             rust.clippy
             pkgs.openssl
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+            # Additional darwin specific inputs can be set here
+            pkgs.libiconv
+            pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
           ];
         in
         {
