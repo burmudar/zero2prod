@@ -41,7 +41,10 @@
             rust.rustfmt
             rust.rust-analyzer
             rust.clippy
+
+            # other dependencies
             pkgs.openssl
+            pkgs.postgresql_16
           ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
             # Additional darwin specific inputs can be set here
             pkgs.libiconv
@@ -56,6 +59,9 @@
             shellHook = ''
             export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig";
             export PATH="$HOME/.cargo/bin":$PATH
+
+            # initialize services needed in our shell
+            . ./dev/shell-hook.sh
             '';
           };
         });
