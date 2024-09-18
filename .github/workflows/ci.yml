@@ -26,9 +26,6 @@ jobs:
       run: nix develop --impure --command cargo fmt -- --check
     - name: Lint
       run: nix develop --impure --command cargo clippy -- -D warnings
-      env:
-        LD_LIBRARY_PATH: ''
-
     - name: Build
       run: nix develop --impure --command cargo build --verbose
     - name: Test

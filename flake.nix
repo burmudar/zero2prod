@@ -59,6 +59,7 @@
             # need to tell pkg_config where to find openssl hence PKG_CONFIG_PATH
             shellHook = ''
             export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig";
+            export LD_LIBRARY_PATH="${pkgs.glibc.out}/lib"
             export PATH="$HOME/.cargo/bin":$PATH
 
             if ! [ -x "$(command -v sqlx)" ]; then
