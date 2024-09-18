@@ -37,6 +37,7 @@ function setup_db() {
   export PGHOST="${ROOT_DIR}/.db"
   export PGDATASOURCE="postgres:///${PGDATABASE}?host=${PGHOST}"
   export PGDATA="${PGHOST}/${PGDATABASE}"
+  export PGLISTEN="${PGLISTEN:=localhost}"
 
   if [ ! -d ${PGHOST} ]; then
     mkdir -p ${PGHOST}
@@ -47,7 +48,7 @@ function setup_db() {
     initdb -U postgres "$PGDATA" --nosync --encoding=UTF8 --no-locale --auth=trust >/dev/null
     cat <<-EOF >>"$PGDATA"/postgresql.conf
         unix_socket_directories = '$PGHOST'
-        listen_addresses = 'localhost'
+        listen_addresses = '$PGLISTEN'
         max_connections = 1000
         shared_buffers = 12MB
         fsync = off
