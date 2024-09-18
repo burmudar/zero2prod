@@ -60,6 +60,10 @@
             export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig";
             export PATH="$HOME/.cargo/bin":$PATH
 
+            if ! [ -x "$(command -v sqlx)" ]; then
+              cargo install --version 0.8.2 sqlx-cli --no-default-features --features postgres
+            fi
+
             # initialize services needed in our shell
             . ./dev/shell-hook.sh
             '';

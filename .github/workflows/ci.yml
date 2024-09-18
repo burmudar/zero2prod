@@ -22,12 +22,12 @@ jobs:
       with:
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Fmt
-      run: nix develop --impure cargo fmt -- --check
+      run: nix develop --impure --command cargo fmt -- --check
     - name: Lint
-      run: nix develop --impure cargo clippy -- -D warnings
+      run: nix develop --impure --command cargo clippy -- -D warnings
     - name: Build
-      run: nix develop --impure cargo build --verbose
+      run: nix develop --impure --command cargo build --verbose
     - name: Test
-      run: nix develop --impure cargo test --verbose
+      run: nix develop --impure --command cargo test --verbose
     - name: Audit
-      run: nix develop --impure cargo test --verbose
+      run: nix develop --impure --command cargo test --verbose
