@@ -45,6 +45,7 @@
             # other dependencies
             pkgs.openssl
             pkgs.postgresql_16
+            pkgs.glibc.dev
           ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
             # Additional darwin specific inputs can be set here
             pkgs.libiconv
@@ -54,7 +55,7 @@
         {
           default = pkgs.mkShell {
             buildInputs = baseDeps;
-            nativeBuildInputs = [ pkgs.pkg-config pkgs.glibc.dev ]; # need this for openssl-sys crate
+            nativeBuildInputs = [ pkgs.pkg-config ]; # need this for openssl-sys crate
             # need to tell pkg_config where to find openssl hence PKG_CONFIG_PATH
             shellHook = ''
             export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig";
