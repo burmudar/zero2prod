@@ -25,10 +25,18 @@ jobs:
     - name: Fmt
       run: nix develop --impure --command cargo fmt -- --check
     - name: Lint
-      run: nix develop --impure --command cargo clippy -- -D warnings
+      run: |
+        rm -rf ~/.cargo/bin/
+        nix develop --impure --command cargo clippy -- -D warnings
     - name: Build
-      run: nix develop --impure --command cargo build --verbose
+      run: |
+        rm -rf ~/.cargo/bin/
+        nix develop --impure --command cargo build --verbose
     - name: Test
-      run: nix develop --impure --command cargo test --verbose
+      run: |
+        rm -rf ~/.cargo/bin/
+        nix develop --impure --command cargo test --verbose
     - name: Audit
-      run: nix develop --impure --command cargo test --verbose
+      run: |
+        rm -rf ~/.cargo/bin/
+        nix develop --impure --command cargo test --verbose
