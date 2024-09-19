@@ -2,6 +2,8 @@
 
 set -e
 
+source ${__ZERO2PROD_LIB_PATH}
+
 SKIP_INIT=${1:-"false"}
 
 function setup_db() {
@@ -12,7 +14,7 @@ function setup_db() {
   export PGDATABASE="${POSTGRES_DB:=newsletter}"
   export PGPORT="${POSTGRES_PORT:=5432}"
 
-  export PGHOST="${root()}/.db"
+  export PGHOST="$(root)/.db"
   export PGDATASOURCE="postgres:///${PGDATABASE}?host=${PGHOST}"
   export PGDATA="${PGHOST}/${PGDATABASE}"
   export PGLISTEN="${PGLISTEN:=localhost}"

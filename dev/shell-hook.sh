@@ -2,7 +2,11 @@
 # quickly retrigger direnv
 rootDir="$(cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)"
 
-source ${rootDir)/dev/lib.sh
+export __ZERO2PROD_ROOT_DIR="${rootDir}"
+export __ZERO2PROD_LIB_PATH="${rootDir}/dev/lib.sh"
+source ${__ZERO2PROD_LIB_PATH}
+
+export __ZERO2PROD_ROOT_DIR="${rootDir}"
 
 function dep_checks() {
   if ! [ -x "$(command -v psql)" ]; then
@@ -23,4 +27,4 @@ if [ ${CI:-0} == 1 ]; then
   rm -rf ~/.cargo/bin
 fi
 
-./start-db.sh
+. ${rootDir}/dev/start-db.sh
