@@ -4,11 +4,12 @@
   # Nixpkgs / NixOS version to use.
   inputs= {
     nixpkgs.url = "github:NixOS/nixpkgs";
+    unstable-nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, rust-overlay }:
+  outputs = { self, nixpkgs, unstable-nixpkgs, rust-overlay }:
     let
 
       # System types to support.
@@ -25,6 +26,9 @@
             rust-overlay.overlays.default
           ];
         };
+        unstablePkgs = import unstable-nixpkgs {
+          inherit system;
+        };
       });
       rustVersion = "1.81.0";
 
@@ -35,12 +39,16 @@
       devShells = forAllSystems (system:
         let
           pkgs = let result = nixpkgsFor.${system}; in result.pkgs;
+          uPkgs = let result = nixpkgsFor.${system}; in result.unstablePkgs;
           rust = pkgs.rust-bin.stable."${rustVersion}";
           baseDeps = [
             rust.default
             rust.rustfmt
             rust.rust-analyzer
             rust.clippy
+
+            # we install this here instaed of cargo ... since installing binaries with cargo results in glibc issues
+            uPkgs.sqlx-cli
 
             # other dependencies
             pkgs.openssl
@@ -59,12 +67,8 @@
             # need to tell pkg_config where to find openssl hence PKG_CONFIG_PATH
             shellHook = ''
             export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig";
-            export LD_LIBRARY_PATH="${pkgs.glibc.out}/lib"
             export PATH="$HOME/.cargo/bin":$PATH
 
-            if ! [ -x "$(command -v sqlx)" ]; then
-              cargo install --version 0.8.2 sqlx-cli --no-default-features --features postgres
-            fi
 
             # initialize services needed in our shell
             . ./dev/shell-hook.sh
