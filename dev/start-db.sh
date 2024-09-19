@@ -5,20 +5,27 @@ set -e
 source ${__ZERO2PROD_LIB_PATH}
 
 SKIP_INIT=${1:-"false"}
+__DB_ENV=0
+
+
+function db_env() {
+  if [ ${__DB_ENV} == 0 ]; then
+    export PGUSER="${PGUSER:=postgres}"
+    export PGPASSWORD="${PGPASSWORD:=password}"
+
+    export PGDATABASE="${POSTGRES_DB:=newsletter}"
+    export PGPORT="${POSTGRES_PORT:=5432}"
+
+    export PGHOST="$(root)/.db"
+    export PGDATASOURCE="postgres:///${PGDATABASE}?host=${PGHOST}"
+    export PGDATA="${PGHOST}/${PGDATABASE}"
+    export PGLISTEN="${PGLISTEN:=localhost}"
+  fi
+  __DB_ENV=1
+}
 
 function setup_db() {
-
-  export PGUSER="${PGUSER:=postgres}"
-  export PGPASSWORD="${PGPASSWORD:=password}"
-
-  export PGDATABASE="${POSTGRES_DB:=newsletter}"
-  export PGPORT="${POSTGRES_PORT:=5432}"
-
-  export PGHOST="$(root)/.db"
-  export PGDATASOURCE="postgres:///${PGDATABASE}?host=${PGHOST}"
-  export PGDATA="${PGHOST}/${PGDATABASE}"
-  export PGLISTEN="${PGLISTEN:=localhost}"
-
+  db_env
   if [ ! -d ${PGHOST} ]; then
     mkdir -p ${PGHOST}
   fi
@@ -44,6 +51,7 @@ EOF
 }
 
 function migrate_db() {
+  db_env
   echo "--- Running DB migrations"
   export DATABASE_URL=${PGDATASOURCE}
   sqlx database create
