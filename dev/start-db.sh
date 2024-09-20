@@ -2,7 +2,7 @@
 
 set -e
 
-source ${__ZERO2PROD_LIB_PATH}
+source ${__ZERO2PROD_LIB_PATH:-"lib.sh"}
 
 SKIP_INIT=${1:-"false"}
 __DB_ENV=0
