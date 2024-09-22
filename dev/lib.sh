@@ -2,7 +2,7 @@
 
 set -e
 
-rootDir="$(dirname "${BASH_SOURCE[0]}")/.."
+rootDir="$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")"
 
 function root() {
   echo "${rootDir}"

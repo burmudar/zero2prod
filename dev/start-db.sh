@@ -10,6 +10,7 @@ __DB_ENV=0
 
 function db_env() {
   if [ ${__DB_ENV} == 0 ]; then
+    echo "--- Exporting DB Env"
     export PGUSER="${PGUSER:=postgres}"
     export PGPASSWORD="${PGPASSWORD:=password}"
 
@@ -44,23 +45,29 @@ function setup_db() {
 EOF
   fi
 
-  if ! pg_isready --quiet; then
-    echo 'Starting postgresql database...'
-    pg_ctl start -l "$PGHOST/log" 3>&-
-  fi
 }
 
 function migrate_db() {
-  db_env
   echo "--- Running DB migrations"
   export DATABASE_URL=${PGDATASOURCE}
   sqlx database create
   sqlx migrate run
 }
 
+function start_db() {
+  echo "--- Starting DB"
+  if ! pg_isready --quiet; then
+    echo 'Starting postgresql database...'
+    pg_ctl start -l "$PGHOST/log" 3>&-
+  fi
+}
+
+db_env
 if [ ${SKIP_INIT} == "false" ]; then
   setup_db
 else
   echo "Skipping DB init"
 fi
+start_db
 migrate_db
+
