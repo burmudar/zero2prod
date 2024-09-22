@@ -4,11 +4,12 @@
   # Nixpkgs / NixOS version to use.
   inputs= {
     nixpkgs.url = "github:NixOS/nixpkgs";
+    unstable-nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, rust-overlay }:
+  outputs = { self, nixpkgs, unstable-nixpkgs, rust-overlay }:
     let
 
       # System types to support.
@@ -25,6 +26,9 @@
             rust-overlay.overlays.default
           ];
         };
+        unstablePkgs = import unstable-nixpkgs {
+          inherit system;
+        };
       });
       rustVersion = "1.81.0";
 
@@ -35,19 +39,39 @@
       devShells = forAllSystems (system:
         let
           pkgs = let result = nixpkgsFor.${system}; in result.pkgs;
+          uPkgs = let result = nixpkgsFor.${system}; in result.unstablePkgs;
           rust = pkgs.rust-bin.stable."${rustVersion}";
           baseDeps = [
             rust.default
             rust.rustfmt
             rust.rust-analyzer
             rust.clippy
+
+            # we install this here instaed of cargo ... since installing binaries with cargo results in glibc issues
+            uPkgs.sqlx-cli
+
+            # other dependencies
+            pkgs.openssl
+            pkgs.postgresql_16
+            pkgs.glibc.dev
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+            # Additional darwin specific inputs can be set here
+            pkgs.libiconv
+            pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
           ];
         in
         {
           default = pkgs.mkShell {
             buildInputs = baseDeps;
+            nativeBuildInputs = [ pkgs.pkg-config ]; # need this for openssl-sys crate
+            # need to tell pkg_config where to find openssl hence PKG_CONFIG_PATH
             shellHook = ''
+            export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig";
             export PATH="$HOME/.cargo/bin":$PATH
+
+
+            # initialize services needed in our shell
+            . ./dev/shell-hook.sh
             '';
           };
         });

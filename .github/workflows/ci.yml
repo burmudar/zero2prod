@@ -9,21 +9,43 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  LD_LIBRARY_PATH: ''
 
 jobs:
-  ci:
+  test:
+    name: Test
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
+    - uses: DeterminateSystems/nix-installer-action@main
+    - uses: DeterminateSystems/magic-nix-cache-action@main
+    - uses: DeterminateSystems/flake-checker-action@main
+    - name: Cache Cargo
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Fmt
-      run: cargo fmt -- --check
+      run: nix develop --impure --command cargo fmt -- --check
     - name: Lint
-      run: cargo clippy -- -D warnings
+      run: |
+        rm -rf ~/.cargo/bin/
+        nix develop --impure --command cargo clippy -- -D warnings
     - name: Build
-      run: cargo build --verbose
+      run: |
+        rm -rf ~/.cargo/bin/
+        nix develop --impure --command cargo build --verbose
     - name: Test
-      run: cargo test --verbose
+      run: |
+        rm -rf ~/.cargo/bin/
+        nix develop --impure --command cargo test --verbose
     - name: Audit
-      run: cargo test --verbose
+      run: |
+        rm -rf ~/.cargo/bin/
+        nix develop --impure --command cargo test --verbose
