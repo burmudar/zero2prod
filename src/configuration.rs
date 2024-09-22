@@ -27,6 +27,20 @@ impl DatabaseSettings {
             )
         }
     }
+
+    pub fn connection_str_without_name(&self) -> String {
+        if self.port == 0 {
+            format!(
+                "postgres://{}:{}@{}",
+                self.username, self.password, self.host
+            )
+        } else {
+            format!(
+                "postgres://{}:{}@{}:{}",
+                self.username, self.password, self.host, self.port
+            )
+        }
+    }
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
