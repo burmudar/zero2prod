@@ -41,8 +41,9 @@
           pkgs = let result = nixpkgsFor.${system}; in result.pkgs;
           uPkgs = let result = nixpkgsFor.${system}; in result.unstablePkgs;
           rust = pkgs.rust-bin.stable."${rustVersion}";
+          rust-nightly = pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default);
           baseDeps = [
-            rust.default
+            rust-nightly
             rust.rustfmt
             rust.rust-analyzer
             rust.clippy
