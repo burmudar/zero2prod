@@ -1,11 +1,19 @@
-use env_logger::Env;
 use sqlx::PgPool;
 use std::net::TcpListener;
+use tracing::subscriber::set_global_default;
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_subscriber::{prelude::*, EnvFilter, Registry};
 use zero2prod::{configuration::get_configuration, startup::run};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    let env_fitler = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let formatting_layer = BunyanFormattingLayer::new("zero2prod".into(), std::io::stdout);
+    let subscriber = Registry::default()
+        .with(env_fitler)
+        .with(JsonStorageLayer)
+        .with(formatting_layer);
+    set_global_default(subscriber).expect("failed to set subscriber");
 
     let settings = get_configuration().expect("failed to load configuration.");
     let address = format!("127.0.0.1:{}", settings.application_port);
