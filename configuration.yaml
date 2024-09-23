@@ -5,5 +5,3 @@ database:
   username: "postgres"
   password: "password"
   name: "newsletter"
-
-
