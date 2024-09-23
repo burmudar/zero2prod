@@ -43,7 +43,8 @@
           rust = pkgs.rust-bin.stable."${rustVersion}";
           rust-nightly = pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default);
           baseDeps = [
-            rust-nightly
+            # rust-nightly - only needed for udeps
+            rust.default
             rust.rustfmt
             rust.rust-analyzer
             rust.clippy
