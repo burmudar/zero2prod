@@ -51,6 +51,7 @@
 
             # we install this here instaed of cargo ... since installing binaries with cargo results in glibc issues
             uPkgs.sqlx-cli
+            uPkgs.bunyan-rs
 
             # other dependencies
             pkgs.openssl

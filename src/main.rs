@@ -5,7 +5,7 @@ use zero2prod::{configuration::get_configuration, startup::run, telemetry};
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     // Setup telemetry
-    let subscriber = telemetry::get_subscriber("zero2prod".into(), "info".into());
+    let subscriber = telemetry::get_subscriber("zero2prod".into(), "info".into(), std::io::stdout);
     telemetry::init_subscriber(subscriber);
 
     let settings = get_configuration().expect("failed to load configuration.");
