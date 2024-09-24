@@ -1,9 +1,18 @@
 //! tests/health_check.rs
 use std::net::TcpListener;
 
+use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
-use zero2prod::configuration::{self, DatabaseSettings};
+use zero2prod::{
+    configuration::{self, DatabaseSettings},
+    telemetry,
+};
+
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let subscriber = telemetry::get_subscriber("test".into(), "debug".into());
+    telemetry::init_subscriber(subscriber);
+});
 
 pub struct TestApp {
     pub address: String,
@@ -11,6 +20,9 @@ pub struct TestApp {
 }
 
 async fn spawn_app() -> TestApp {
+    // The first time `initialize` is invoked the code in `TRACING` is executed.
+    // All other invocations will instead skip execution
+    Lazy::force(&TRACING);
     // port 0 is special OS wise - OS will scan and give us the first open port
     let listener = TcpListener::bind("127.0.0.1:0").expect("faield to bind to random port");
     let port = listener.local_addr().unwrap().port();

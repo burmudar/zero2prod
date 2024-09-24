@@ -1,9 +1,13 @@
 use sqlx::PgPool;
 use std::net::TcpListener;
-use zero2prod::{configuration::get_configuration, startup::run};
+use zero2prod::{configuration::get_configuration, startup::run, telemetry};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    // Setup telemetry
+    let subscriber = telemetry::get_subscriber("zero2prod".into(), "info".into());
+    telemetry::init_subscriber(subscriber);
+
     let settings = get_configuration().expect("failed to load configuration.");
     let address = format!("127.0.0.1:{}", settings.application_port);
     let listener = TcpListener::bind(address)?;
