@@ -13,7 +13,6 @@ pub struct FormData {
     name = "adding new subscriber",
     skip(form, pool),
     fields(
-        request_id = %Uuid::new_v4(),
         // the '%' below tells tracing to use their Display trait when rendering their values
         subscriber_email = %form.email,
         subscriber_name = %form.name,
