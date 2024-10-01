@@ -5,68 +5,88 @@
   inputs= {
     nixpkgs.url = "github:NixOS/nixpkgs";
     unstable-nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    rust-overlay.url = "github:oxalica/rust-overlay";
-    rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
+    crane.url = "github:ipetkov/crane";
+    flake-utils.url = "github:numtide/flake-utils";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, unstable-nixpkgs, rust-overlay }:
+  outputs = { self, nixpkgs, unstable-nixpkgs, crane, flake-utils, rust-overlay }:
+    flake-utils.lib.eachDefaultSystem (system:
     let
-
-      # System types to support.
-      supportedSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ];
-
-      # Helper function to generate an attrset '{ x86_64-linux = f "x86_64-linux"; ... }'.
-      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-
-      # Nixpkgs instantiated for supported system types.
-      nixpkgsFor = forAllSystems (system: {
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [
-            rust-overlay.overlays.default
-          ];
-        };
-        unstablePkgs = import unstable-nixpkgs {
-          inherit system;
-        };
-      });
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [ (import rust-overlay) ];
+      };
+      uPkgs = import unstable-nixpkgs {
+        inherit system;
+      };
       rustVersion = "1.81.0";
+      craneLib = (crane.mkLib pkgs).overrideToolchain (p: p.rust-bin.stable."${rustVersion}");
 
-    in
-    {
+      sqlFilter = path: _type: null != builtins.match ".*sql$" path;
+      sqlOrCargo = path: type: (sqlFilter path type) || (craneLib.filterCargoSource path type);
+      src = craneLib.cleanCargoSource {
+        src = ./.;
+        filter = sqlOrCargo;
+        name = "source";
+      };
 
-      # Add dependencies that are only needed for development
-      devShells = forAllSystems (system:
-        let
-          pkgs = let result = nixpkgsFor.${system}; in result.pkgs;
-          uPkgs = let result = nixpkgsFor.${system}; in result.unstablePkgs;
-          rust = pkgs.rust-bin.stable."${rustVersion}";
-          rust-nightly = pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default);
-          baseDeps = [
-            # rust-nightly - only needed for udeps
-            rust.default
-            rust.rustfmt
-            rust.rust-analyzer
-            rust.clippy
+      commonArgs = {
+        inherit src;
+        strictDeps = true;
 
-            # we install this here instaed of cargo ... since installing binaries with cargo results in glibc issues
-            uPkgs.sqlx-cli
-            uPkgs.bunyan-rs
+        nativeBuildInputs = [
+            pkgs.pkg-config
+        ];
 
-            # other dependencies
-            pkgs.openssl
+          buildInputs = [
             pkgs.postgresql_16
+            pkgs.openssl
             pkgs.glibc.dev
           ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
             # Additional darwin specific inputs can be set here
             pkgs.libiconv
             pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
           ];
-        in
+      };
+
+      cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+
+      zero2prod = craneLib.buildPackage ( commonArgs // {
+          inherit cargoArtifacts;
+
+          nativeBuildInputs = (commonArgs.nativeBuildInputs or []) ++ [ pkgs.sqlx-cli ];
+          preBuild = ''
+            ./start-db.sh
+          '';
+        });
+
+    in
+    {
+
+      checks = {
+          inherit zero2prod;
+      };
+
+      packages = {
+          default = zero2prod;
+          inherit zero2prod;
+        };
+      formatter = pkgs.nixpkgs-fmt;
+
+      # Add dependencies that are only needed for development
+      devShells =
         {
-          default = pkgs.mkShell {
-            buildInputs = baseDeps;
-            nativeBuildInputs = [ pkgs.pkg-config ]; # need this for openssl-sys crate
+          default = pkgs.mkShell ( commonArgs // {
+            buildInputs = (commonArgs.buildInputs or []) ++ [
+              # we install this here instaed of cargo ... since installing binaries with cargo results in glibc issues
+              uPkgs.sqlx-cli
+              uPkgs.bunyan-rs
+            ];
+
             # need to tell pkg_config where to find openssl hence PKG_CONFIG_PATH
             shellHook = ''
             export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig";
@@ -76,10 +96,9 @@
             # initialize services needed in our shell
             . ./dev/shell-hook.sh
             '';
-          };
-        });
+          });
 
-      formatter = forAllSystems (system: nixpkgsFor.${system}.nixpkgs-fmt);
 
-    };
+        };
+      });
 }
