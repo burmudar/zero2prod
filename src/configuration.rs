@@ -1,3 +1,4 @@
+use secrecy::{ExposeSecret, SecretBox, SecretString};
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
@@ -7,38 +8,54 @@ pub struct Settings {
 #[derive(serde::Deserialize)]
 pub struct DatabaseSettings {
     pub username: String,
-    pub password: String,
+    pub password: SecretString,
     pub port: u16,
     pub host: String,
     pub name: String,
 }
 
 impl DatabaseSettings {
-    pub fn connection_str(&self) -> String {
+    pub fn connection_str(&self) -> SecretString {
         if self.port == 0 {
-            format!(
+            let value = format!(
                 "postgres://{}:{}@{}/{}",
-                self.username, self.password, self.host, self.name
-            )
+                self.username,
+                self.password.expose_secret(),
+                self.host,
+                self.name
+            );
+            SecretString::new(value.into())
         } else {
-            format!(
+            let value = format!(
                 "postgres://{}:{}@{}:{}/{}",
-                self.username, self.password, self.host, self.port, self.name
-            )
+                self.username,
+                self.password.expose_secret(),
+                self.host,
+                self.port,
+                self.name
+            );
+            SecretBox::new(value.into())
         }
     }
 
-    pub fn connection_str_without_name(&self) -> String {
+    pub fn connection_str_without_name(&self) -> SecretString {
         if self.port == 0 {
-            format!(
+            let value = format!(
                 "postgres://{}:{}@{}",
-                self.username, self.password, self.host
-            )
+                self.username,
+                self.password.expose_secret(),
+                self.host
+            );
+            SecretString::new(value.into())
         } else {
-            format!(
+            let value = format!(
                 "postgres://{}:{}@{}:{}",
-                self.username, self.password, self.host, self.port
-            )
+                self.username,
+                self.password.expose_secret(),
+                self.host,
+                self.port
+            );
+            SecretString::new(value.into())
         }
     }
 }
