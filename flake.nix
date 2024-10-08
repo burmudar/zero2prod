@@ -2,103 +2,98 @@
   description = "flake for rust development";
 
   # Nixpkgs / NixOS version to use.
-  inputs= {
+  inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
     unstable-nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     crane.url = "github:ipetkov/crane";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
-      follows = "nixpkgs";
+      # if you specify just nixpkgs.follows, then you'll get a confusing infinite branching error
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
   outputs = { self, nixpkgs, unstable-nixpkgs, crane, flake-utils, rust-overlay }:
     flake-utils.lib.eachDefaultSystem (system:
-    let
-      pkgs = import nixpkgs {
-        inherit system;
+      let
         overlays = [ (import rust-overlay) ];
-      };
-      uPkgs = import unstable-nixpkgs {
-        inherit system;
-      };
-      rustVersion = "1.81.0";
-      craneLib = (crane.mkLib pkgs).overrideToolchain (p: p.rust-bin.stable."${rustVersion}");
+        pkgs = import nixpkgs {
+          inherit system overlays;
+        };
+        inherit (pkgs) lib;
 
-      sqlFilter = path: _type: null != builtins.match ".*sql$" path;
-      sqlOrCargo = path: type: (sqlFilter path type) || (craneLib.filterCargoSource path type);
-      src = craneLib.cleanCargoSource {
-        src = ./.;
-        filter = sqlOrCargo;
-        name = "source";
-      };
+        upkgs = import unstable-nixpkgs {
+          inherit system;
+        };
 
-      commonArgs = {
-        inherit src;
-        strictDeps = true;
+        craneLib = (crane.mkLib pkgs).overrideToolchain pkgs.rust-bin.stable."1.81.0".default;
 
-        nativeBuildInputs = [
+        sqlFilter = path: _type: null != builtins.match ".*sql$" path;
+        sqlOrCargo = path: type: (sqlFilter path type) || (craneLib.filterCargoSources path type);
+
+        src = lib.cleanSourceWith {
+          src = ./.;
+          filter = sqlOrCargo;
+          name = "source";
+        };
+
+        commonArgs = {
+          inherit src;
+          strictDeps = true;
+
+          nativeBuildInputs = [
             pkgs.pkg-config
-        ];
+          ];
 
           buildInputs = [
             pkgs.postgresql_16
             pkgs.openssl
             pkgs.glibc.dev
           ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-            # Additional darwin specific inputs can be set here
             pkgs.libiconv
             pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
           ];
-      };
+        };
+        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-      cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-
-      zero2prod = craneLib.buildPackage ( commonArgs // {
+        # Build the actual Rust package
+        zero2prod = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
-
-          nativeBuildInputs = (commonArgs.nativeBuildInputs or []) ++ [ pkgs.sqlx-cli ];
           preBuild = ''
             ./start-db.sh
           '';
         });
 
-    in
-    {
+      in
+      {
 
-      checks = {
-          inherit zero2prod;
-      };
-
-      packages = {
+        checks = {
           default = zero2prod;
-          inherit zero2prod;
         };
-      formatter = pkgs.nixpkgs-fmt;
 
-      # Add dependencies that are only needed for development
-      devShells =
-        {
-          default = pkgs.mkShell ( commonArgs // {
-            buildInputs = (commonArgs.buildInputs or []) ++ [
-              # we install this here instaed of cargo ... since installing binaries with cargo results in glibc issues
-              uPkgs.sqlx-cli
-              uPkgs.bunyan-rs
-            ];
+        packages = {
+          default = zero2prod;
+        };
 
-            # need to tell pkg_config where to find openssl hence PKG_CONFIG_PATH
-            shellHook = ''
+        formatter = pkgs.nixpkgs-fmt;
+
+        devShells.default = craneLib.devShell (commonArgs // {
+          packages = (commonArgs.buildInputs or [ ]) ++ [
+            # we install this here instaed of cargo ... since installing binaries with cargo results in glibc issues
+            upkgs.sqlx-cli
+            upkgs.bunyan-rs
+          ];
+
+          # need to tell pkg_config where to find openssl hence PKG_CONFIG_PATH
+          shellHook = ''
             export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig";
             export PATH="$HOME/.cargo/bin":$PATH
 
 
             # initialize services needed in our shell
             . ./dev/shell-hook.sh
-            '';
-          });
-
-
-        };
+          '';
+        });
       });
 }
