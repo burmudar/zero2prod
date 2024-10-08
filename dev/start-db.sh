@@ -28,6 +28,7 @@ function db_env() {
 function setup_db() {
   db_env
   if [ ! -d ${PGHOST} ]; then
+    echo "creating ${PGHOST}"
     mkdir -p ${PGHOST}
   fi
 
@@ -62,12 +63,7 @@ function start_db() {
   fi
 }
 
-db_env
-if [ ${SKIP_INIT} == "false" ]; then
-  setup_db
-else
-  echo "Skipping DB init"
-fi
+setup_db
 start_db
 migrate_db
 

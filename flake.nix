@@ -29,14 +29,14 @@
 
         craneLib = (crane.mkLib pkgs).overrideToolchain pkgs.rust-bin.stable."1.81.0".default;
 
-        sqlFilter = path: _type: null != builtins.match ".*sql$" path;
-        sqlOrCargo = path: type: (sqlFilter path type) || (craneLib.filterCargoSources path type);
+        miscFileFilter = path: _type: null != builtins.match ".*sql$|.*sh$|.*yaml$" path;
+        sqlOrCargo = path: type: (miscFileFilter path type) || (craneLib.filterCargoSources path type);
 
-        src = lib.cleanSourceWith {
+        src = lib.sources.trace (lib.cleanSourceWith {
           src = ./.;
           filter = sqlOrCargo;
           name = "source";
-        };
+        });
 
         commonArgs = {
           inherit src;
@@ -44,10 +44,11 @@
 
           nativeBuildInputs = [
             pkgs.pkg-config
+            upkgs.sqlx-cli
+            pkgs.postgresql_16
           ];
 
           buildInputs = [
-            pkgs.postgresql_16
             pkgs.openssl
             pkgs.glibc.dev
           ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
@@ -61,7 +62,8 @@
         zero2prod = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
           preBuild = ''
-            ./start-db.sh
+            set -x
+            . dev/shell-hook.sh
           '';
         });
 

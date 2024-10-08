@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# quickly retrigger direnv
+
 rootDir="$(cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)"
 
 export __ZERO2PROD_ROOT_DIR="${rootDir}"
