@@ -57,6 +57,8 @@
             pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
           ];
         };
+        # careful where you put this preBuild. If you put it CommonArgs it will apply to
+        # craneLib.buildDepsOnly too - which is a much more strict env with only rust files available
         preBuild = ''
           . dev/shell-hook.sh
         '';
@@ -65,11 +67,8 @@
         # Build the actual Rust package
         zero2prod = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
+          # we need the DB to be up before things are built
           inherit preBuild;
-
-          # careful where you put this preBuild. If you put it CommonArgs it will apply to
-          # craneLib.buildDepsOnly too - which is a much more strict env with only rust files available
-
         });
 
       in
@@ -81,6 +80,7 @@
 
           zero2prod-clippy = craneLib.cargoClippy (commonArgs // {
             inherit cargoArtifacts;
+            # we need the DB to be up before things are built
             inherit preBuild;
             cargoClippyExtraArgs = "-- -D warnings";
           });
