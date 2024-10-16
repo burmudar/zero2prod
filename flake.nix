@@ -31,12 +31,13 @@
 
         miscFileFilter = path: _type: null != builtins.match ".*sql$|.*sh$|.*yaml$" path;
         sqlOrCargo = path: type: (miscFileFilter path type) || (craneLib.filterCargoSources path type);
-
-        src = lib.sources.trace (lib.cleanSourceWith {
-          src = ./.;
+        # Use lib.sources.trace to see what the filter below filters
+        src =  lib.cleanSourceWith {
+          src = craneLib.path ./.;
           filter = sqlOrCargo;
           name = "source";
-        });
+        };
+
 
         commonArgs = {
           inherit src;
@@ -56,15 +57,18 @@
             pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
           ];
         };
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+        cargoArtifacts = craneLib.buildDepsOnly ( commonArgs );
 
         # Build the actual Rust package
         zero2prod = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
+
+          # careful where you put this preBuild. If you put it CommonArgs it will apply to
+          # craneLib.buildDepsOnly too - which is a much more strict env with only rust files available
           preBuild = ''
-            set -x
             . dev/shell-hook.sh
           '';
+
         });
 
       in
@@ -72,6 +76,12 @@
 
         checks = {
           default = zero2prod;
+          inherit zero2prod;
+
+          zero2prod-clippy = craneLib.cargoClippy ( commonArgs // {
+            inherit cargoArtifacts;
+            cargoClippyExtraArgs = "-- -D warnings";
+          });
         };
 
         packages = {
@@ -81,7 +91,7 @@
         formatter = pkgs.nixpkgs-fmt;
 
         devShells.default = craneLib.devShell (commonArgs // {
-          packages = (commonArgs.buildInputs or [ ]) ++ [
+          packages = (commonArgs.nativeBuildInputs or []) ++ (commonArgs.buildInputs or [ ]) ++ [
             # we install this here instaed of cargo ... since installing binaries with cargo results in glibc issues
             upkgs.sqlx-cli
             upkgs.bunyan-rs

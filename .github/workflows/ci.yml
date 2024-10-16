@@ -39,8 +39,7 @@ jobs:
         nix develop --impure --command cargo clippy -- -D warnings
     - name: Build
       run: |
-        rm -rf ~/.cargo/bin/
-        nix develop --impure --command cargo build --verbose
+        nix build '.#'
     - name: Test
       run: |
         rm -rf ~/.cargo/bin/
