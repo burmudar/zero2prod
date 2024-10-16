@@ -32,7 +32,7 @@
         miscFileFilter = path: _type: null != builtins.match ".*sql$|.*sh$|.*yaml$" path;
         sqlOrCargo = path: type: (miscFileFilter path type) || (craneLib.filterCargoSources path type);
         # Use lib.sources.trace to see what the filter below filters
-        src =  lib.cleanSourceWith {
+        src = lib.cleanSourceWith {
           src = craneLib.path ./.;
           filter = sqlOrCargo;
           name = "source";
@@ -57,17 +57,18 @@
             pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
           ];
         };
-        cargoArtifacts = craneLib.buildDepsOnly ( commonArgs );
+        preBuild = ''
+          . dev/shell-hook.sh
+        '';
+        cargoArtifacts = craneLib.buildDepsOnly (commonArgs);
 
         # Build the actual Rust package
         zero2prod = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
+          inherit preBuild;
 
           # careful where you put this preBuild. If you put it CommonArgs it will apply to
           # craneLib.buildDepsOnly too - which is a much more strict env with only rust files available
-          preBuild = ''
-            . dev/shell-hook.sh
-          '';
 
         });
 
@@ -78,8 +79,9 @@
           default = zero2prod;
           inherit zero2prod;
 
-          zero2prod-clippy = craneLib.cargoClippy ( commonArgs // {
+          zero2prod-clippy = craneLib.cargoClippy (commonArgs // {
             inherit cargoArtifacts;
+            inherit preBuild;
             cargoClippyExtraArgs = "-- -D warnings";
           });
         };
@@ -91,7 +93,8 @@
         formatter = pkgs.nixpkgs-fmt;
 
         devShells.default = craneLib.devShell (commonArgs // {
-          packages = (commonArgs.nativeBuildInputs or []) ++ (commonArgs.buildInputs or [ ]) ++ [
+          packages = (commonArgs.nativeBuildInputs or [ ]) ++ (commonArgs.buildInputs or [ ]) ++ [
+            pkgs.rust-analyzer
             # we install this here instaed of cargo ... since installing binaries with cargo results in glibc issues
             upkgs.sqlx-cli
             upkgs.bunyan-rs
