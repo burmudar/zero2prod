@@ -88,6 +88,7 @@
 
         packages = {
           default = zero2prod;
+          docker = (pkgs.callPackage ./docker.nix {inherit pkgs; buildImage = pkgs.dockerTools.buildImage; crate = zero2prod;});
         };
 
         formatter = pkgs.nixpkgs-fmt;
