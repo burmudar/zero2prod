@@ -1,13 +1,20 @@
-{ pkgs, buildImage, crate }:
-  buildImage {
+{ pkgs, lib, buildLayeredImage, crate }:
+let
+  files = lib.fileset.toSource {
+    root = ./.;
+    fileset = lib.fileset.unions [
+      ./src
+      ./migrations
+      ./configuration.yaml
+    ];
+  };
+in
+  buildLayeredImage {
     name = "zero2prod";
     tag = "latest";
-    copyToRoot = pkgs.buildEnv {
-      name = "image-root";
-      # TODO: Look at https://nixos.org/manual/nixpkgs/unstable/#function-library-lib.fileset.toSource to create a drv with the source, since we can't directly include a single file like we currenlty doing
-      paths = [ pkgs.bashInteractive pkgs.coreutils "${crate}" ./. ];
-      pathsToLink = [ "/bin" "/src" "/migrations" ./configuration.yaml ];
-    };
+    contents = [
+      pkgs.bashInteractive pkgs.coreutils "${crate}" files
+    ];
     config = {
       Entrypoint = [ "${pkgs.bashInteractive}/bin/bash" ];
     };
