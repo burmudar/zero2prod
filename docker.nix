@@ -16,6 +16,6 @@ in
       pkgs.bashInteractive pkgs.coreutils "${crate}" files
     ];
     config = {
-      Entrypoint = [ "${pkgs.bashInteractive}/bin/bash" ];
+      Entrypoint = [ "${crate}/bin/zero2prod" ];
     };
 }

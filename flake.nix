@@ -65,6 +65,7 @@
         cargoArtifacts = craneLib.buildDepsOnly (commonArgs);
 
         # Build the actual Rust package
+        # this actually builds the package with `--release`
         zero2prod = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
           # we need the DB to be up before things are built
