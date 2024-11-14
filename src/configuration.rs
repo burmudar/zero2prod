@@ -1,8 +1,10 @@
+use std::fmt::Display;
+
 use secrecy::{ExposeSecret, SecretBox, SecretString};
 #[derive(serde::Deserialize)]
 pub struct Settings {
+    pub application: ApplicationSettings,
     pub database: DatabaseSettings,
-    pub application_port: u16,
 }
 
 #[derive(serde::Deserialize)]
@@ -12,6 +14,18 @@ pub struct DatabaseSettings {
     pub port: u16,
     pub host: String,
     pub name: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct ApplicationSettings {
+    pub port: u16,
+    pub host: String,
+}
+
+impl ApplicationSettings {
+    pub fn address_str(&self) -> String {
+        return format!("{}:{}", self.host, self.port);
+    }
 }
 
 impl DatabaseSettings {
@@ -60,10 +74,51 @@ impl DatabaseSettings {
     }
 }
 
+pub enum Environment {
+    Local,
+    Production,
+}
+
+impl Environment {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Environment::Local => "local",
+            Environment::Production => "production",
+        }
+    }
+}
+
+impl TryFrom<String> for Environment {
+    type Error = String;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        match s.to_lowercase().as_str() {
+            "local" => Ok(Self::Local),
+            "production" => Ok(Self::Production),
+            other => Err(format!(
+                "{} is not a supported environment. Use either `local` or `production`.",
+                other
+            )),
+        }
+    }
+}
+
+impl Display for Environment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
-    // Initialise our configuration reader
+    let environment: Environment = std::env::var("APP_ENVIRONMENT")
+        .unwrap_or_else(|_| "local".into())
+        .try_into()
+        .expect("failed to parse APP_ENVIRONMENT");
     let config = config::Config::builder()
-        .add_source(config::File::with_name("configuration"))
+        .add_source(config::File::with_name("configuration/base").required(true))
+        .add_source(
+            config::File::with_name(&format!("configuration/{environment}")).required(false),
+        )
         .build()
         .unwrap();
 
