@@ -72,6 +72,13 @@
           inherit preBuild;
         });
 
+        sqlx-offline = craneLib.buildPackage ( commonArgs // {
+          inherit cargoArtifacts;
+          inherit preBuild;
+          doCheck = false;
+          buildPhaseCargoCommand = "cargo sqlx prepare -- --lib";
+        });
+
       in
       {
 
@@ -89,6 +96,7 @@
 
         packages = {
           default = zero2prod;
+          sqlx-offline = sqlx-offline;
           docker = (pkgs.callPackage ./docker.nix {inherit pkgs; buildLayeredImage = pkgs.dockerTools.buildLayeredImage; crate = zero2prod;});
         };
 

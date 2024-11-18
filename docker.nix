@@ -5,7 +5,7 @@ let
     fileset = lib.fileset.unions [
       ./src
       ./migrations
-      ./configuration.yaml
+      ./configuration
     ];
   };
 in
@@ -16,6 +16,9 @@ in
       pkgs.bashInteractive pkgs.coreutils "${crate}" files
     ];
     config = {
+      Env = [
+        "APP_ENVIRONMENT=production"
+      ];
       Entrypoint = [ "${crate}/bin/zero2prod" ];
     };
 }
