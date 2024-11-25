@@ -18,6 +18,7 @@ in
     config = {
       Env = [
         "APP_ENVIRONMENT=production"
+        "SQLX_OFFLINE=true"
       ];
       Entrypoint = [ "${crate}/bin/zero2prod" ];
     };

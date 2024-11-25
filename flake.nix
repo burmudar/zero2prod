@@ -29,7 +29,7 @@
 
         craneLib = (crane.mkLib pkgs).overrideToolchain pkgs.rust-bin.stable."1.81.0".default;
 
-        miscFileFilter = path: _type: null != builtins.match ".*sql$|.*sh$|.*yaml$" path;
+        miscFileFilter = path: _type: null != builtins.match ".*sql$|.*sh$|.*yaml$|^.sqlx.*.json$" path;
         sqlOrCargo = path: type: (miscFileFilter path type) || (craneLib.filterCargoSources path type);
         # Use lib.sources.trace to see what the filter below filters
         src = lib.cleanSourceWith {
@@ -68,16 +68,29 @@
         # this actually builds the package with `--release`
         zero2prod = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
-          # we need the DB to be up before things are built
-          inherit preBuild;
+          # TODO(burmudar): If this is set, .sqlx, should be present in the sources, but it isn't
+          # we should debug our miscFilter
+          SQLX_OFFLINE = true;
+          # # we need the DB to be up before things are built
+          # inherit preBuild;
         });
 
+        # we technically don't need this since our package gets compiled locally via nix
+        # thus the db will be available at compile time. This is mostly just done for
+        # educational purposes
         sqlx-offline = craneLib.buildPackage ( commonArgs // {
           inherit cargoArtifacts;
           inherit preBuild;
+          pname = "sqlx-offline";
           doCheck = false;
           buildPhaseCargoCommand = "cargo sqlx prepare -- --lib";
+          installPhaseCommand = "mkdir -p $out && cp -Rv .sqlx $out/ && ls -la $out;";
         });
+
+        copy-sqlx-offline = pkgs.writeScriptBin "copy-sqlx-offline" ''
+            mkdir -p .sqlx
+            cp -Rv ${sqlx-offline}/.sqlx/* .sqlx
+        '';
 
       in
       {
@@ -95,10 +108,19 @@
         };
 
         packages = {
+          inherit copy-sqlx-offline;
           default = zero2prod;
           sqlx-offline = sqlx-offline;
           docker = (pkgs.callPackage ./docker.nix {inherit pkgs; buildLayeredImage = pkgs.dockerTools.buildLayeredImage; crate = zero2prod;});
         };
+
+        apps = {
+          offline = {
+            type = "app";
+            program = "${self.packages.${system}.copy-sqlx-offline}/bin/copy-sqlx-offline";
+          };
+        };
+
 
         formatter = pkgs.nixpkgs-fmt;
 
