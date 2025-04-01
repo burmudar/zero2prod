@@ -17,6 +17,8 @@
   outputs = { self, nixpkgs, unstable-nixpkgs, crane, flake-utils, rust-overlay }:
     flake-utils.lib.eachDefaultSystem (system:
       let
+        # Set to 1 to enable debuig options
+        DEBUG = 1;
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
           inherit system overlays;
@@ -29,11 +31,11 @@
 
         craneLib = (crane.mkLib pkgs).overrideToolchain pkgs.rust-bin.stable."1.81.0".default;
 
-        miscFileFilter = path: _type: null != builtins.match ".*sql$|.*sh$|.*yaml$|^.sqlx.*.json$" path;
+        miscFileFilter = path: _type: null != builtins.match ".*sql$|.*sh$|.*yaml$|^.sqlx$|.*json$" path;
         sqlOrCargo = path: type: (miscFileFilter path type) || (craneLib.filterCargoSources path type);
         # Use lib.sources.trace to see what the filter below filters
         src = lib.cleanSourceWith {
-          src = craneLib.path ./.;
+          src = if DEBUG == 1 then lib.sources.trace (craneLib.path ./.) else (craneLib.path ./.);
           filter = sqlOrCargo;
           name = "source";
         };
@@ -88,6 +90,7 @@
         });
 
         copy-sqlx-offline = pkgs.writeScriptBin "copy-sqlx-offline" ''
+            #!/usr/bin/env bash
             mkdir -p .sqlx
             cp -Rv ${sqlx-offline}/.sqlx/* .sqlx
         '';
